@@ -106,7 +106,11 @@ class GraphExtractor:
                 )  # type: ignore
                 response_text = response.content
                 messages_builder.add_assistant_message(response_text)
-                results += response_text
+                # join gleanings with the record delimiter: the prompt does not ask
+                # the model to terminate its last record, so concatenating directly
+                # fuses it with the next response's first record, and the parser
+                # silently discards the fields of the latter
+                results += f"\n{RECORD_DELIMITER}\n{response_text}"
 
                 # if this is the final glean, don't bother updating the continuation flag
                 if i >= self._max_gleanings - 1:
@@ -135,8 +139,12 @@ class GraphExtractor:
         records = [r.strip() for r in result.split(record_delimiter)]
 
         for raw_record in records:
-            record = re.sub(r"^\(|\)$", "", raw_record.strip())
-            if not record or record == COMPLETION_DELIMITER:
+            # the prompt's own example puts the completion delimiter on the line
+            # after the final record rather than behind a record delimiter, so it
+            # arrives attached to that record and corrupts its last field
+            stripped = raw_record.strip().removesuffix(COMPLETION_DELIMITER).strip()
+            record = re.sub(r"^\(|\)$", "", stripped)
+            if not record:
                 continue
 
             record_attributes = record.split(tuple_delimiter)

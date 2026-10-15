@@ -1,0 +1,4 @@
+{
+  "type": "patch",
+  "description": "Join gleaning responses with the record delimiter and strip trailing completion delimiters so records at a gleaning boundary are not fused"
+}
